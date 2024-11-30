@@ -10,11 +10,11 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def fit(self, data: np.ndarray):
+    def fit(self, *args):
         pass
 
     @abstractmethod
-    def process(self, data: np.ndarray) -> np.ndarray:
+    def process(self, *args) -> np.ndarray:
         pass
 
     @abstractmethod

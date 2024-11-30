@@ -137,14 +137,28 @@ class ReferenceKmeans(DecodableModel):
         for i in range(self.num_coeffs):
             self.quantLevels[i] = quantLevelsCSCG[Bs[i] - 1] * np.sqrt(importances[i])
 
-            pass
-
-    # TODO: Finish implementation
-    def process(self, data: np.ndarray) -> np.ndarray:
-        pass
+    def process(self, zDL: np.ndarray) -> np.ndarray:
+        quantized_zdl = np.zeros_like(zDL)
+        quantLevels = self.quantLevels
+        for i in range(zDL.shape[0]):
+            for j in range(zDL.shape[1]):
+                # Find the closest quantization level
+                distances = np.abs(zDL[i, j] - (quantLevels[j][:, 0] + 1j * quantLevels[j][:, 1]))
+                vecIdx = np.argmin(distances)
+                quantized_zdl[i, j] = quantLevels[j][vecIdx, 0] + 1j * quantLevels[j][vecIdx, 1]
+        return quantized_zdl
 
     def decode(self, error: np.ndarray) -> np.ndarray:
-        pass
+        # TODO Kinda confused about process() and decode() for this? Maybe we don't need it
+        return error
+
+    # def decode(self, error: np.ndarray) -> np.ndarray:
+    #     for i in range(zDL.shape[0]):
+    #         for j in range(zDL.shape[1]):
+    #             # Find the closest quantization level
+    #             distances = np.abs(zDL[i, j] - (quantLevels[j][:, 0] + 1j * quantLevels[j][:, 1]))
+    #             vecIdx = np.argmin(distances)
+    #             zDL[i, j] = quantLevels[j][vecIdx, 0] + 1j * quantLevels[j][vecIdx, 1]
 
     def load(self, path):
         pass
@@ -157,11 +171,16 @@ class NullPredictor(Model):
     def __init__(self):
         pass
 
-    def fit(self, data: np.ndarray):
+    def fit(self, csis: np.ndarray, windows: np.ndarray):
         pass
 
-    def process(self, data: np.ndarray) -> np.ndarray:
-        return np.zeros_like(data)
+    def process(self, windows: np.ndarray) -> np.ndarray:
+        """
+        :param windows: N x window_size x na x nc
+        :return:        N x na x nc
+        """
+        new_shape = (windows.shape[0], *windows.shape[2:])
+        return np.zeros(new_shape, dtype=windows.dtype)
 
     def load(self, path):
         pass
