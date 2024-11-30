@@ -11,6 +11,8 @@ class Config:
     # Additional options/configurations...
     train_test_split: float
     data_root: str
+    duplicate_data: int = 5
+    data_snr: float = 100.0
 
     # For saving and loading models
     model_root: str = "../models"

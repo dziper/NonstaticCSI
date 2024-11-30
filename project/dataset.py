@@ -112,10 +112,12 @@ class Dataset:
             curr = getattr(self, name)
             duplicated_data = np.repeat(curr, times, axis=0)
             var = np.var(curr)
-            noise = np.random.normal(0, var * noise_proportion, duplicated_data.shape)
-            if np.any(np.iscomplex(curr)):
-                noise = noise + 1j * np.random.normal(0, var * noise_proportion, duplicated_data.shape)
-            setattr(self, name, duplicated_data + noise)
+            if noise_proportion > 0:
+                noise = np.random.normal(0, var * noise_proportion, duplicated_data.shape)
+                if np.any(np.iscomplex(curr)):
+                    noise = noise + 1j * np.random.normal(0, var * noise_proportion, duplicated_data.shape)
+                duplicated_data = duplicated_data + noise
+            setattr(self, name, duplicated_data)
 
 
 def load_data(cfg: Config) -> Tuple[Dataset, Dataset]:
@@ -138,10 +140,8 @@ def load_data(cfg: Config) -> Tuple[Dataset, Dataset]:
     train_set = Dataset(cfg, freq_channel, ue_loc, ue_speed, antenna_orient, train_indices)
     test_set = Dataset(cfg, freq_channel, ue_loc, ue_speed, antenna_orient, test_indices)
 
-    duplicate_times = 5
-    noise_proportion = 1e-8
-    train_set.duplicate_and_add_noise(duplicate_times, noise_proportion)
-    test_set.duplicate_and_add_noise(duplicate_times, noise_proportion)
+    train_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.data_snr)
+    test_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.data_snr)
 
     return train_set, test_set
 

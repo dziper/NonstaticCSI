@@ -11,8 +11,9 @@ class ReferencePCA(DecodableModel):
         self.matlab = matlab
         self.cfg = cfg
 
-    def fit(self, data: np.ndarray):
-        HUL_train_compl = self._get_compl(data, set_mean=True)
+    def fit(self, csis: np.ndarray):
+        H_train = np.transpose(csis, (1, 2, 0))
+        HUL_train_compl = self._get_compl(H_train, train_mode=True)
         self.coeff_ori = np.array(self.matlab.pca(HUL_train_compl))
         if self.cfg.reduce_pca_overhead:
             self.reduce_pca_overhead()
@@ -20,8 +21,9 @@ class ReferencePCA(DecodableModel):
             self.coeff = self.coeff_ori
         self.coeff_trunc = self.coeff[:, :self.cfg.max_pca_coeffs]
 
-    def process(self, csis: np.ndarray) -> np.ndarray:
-        HUL_test_compl = self._get_compl(csis)
+    def process(self, csis: np.ndarray, train_mode=False) -> np.ndarray:
+        H_train = np.transpose(csis, (1, 2, 0))
+        HUL_test_compl = self._get_compl(H_train, train_mode=train_mode)
         return np.dot(HUL_test_compl, self.coeff)  # zDL
 
     def decode(self, zDL: np.ndarray) -> np.ndarray:
@@ -37,18 +39,16 @@ class ReferencePCA(DecodableModel):
     def save(self, path):
         pass
 
-    def _get_compl(self, csis, set_mean=False):
+    def _get_compl(self, HUL_train_n, train_mode=False):
         # TODO naming
-        HUL_train_n = np.transpose(csis, (1, 2, 0))
         Lambda = 1.0 / np.mean(np.abs(HUL_train_n)**2, axis=(0, 1))
         HUL_train_n *= np.sqrt(Lambda[np.newaxis, np.newaxis, :])
         HUL_train_compl_tmp = HUL_train_n.reshape(
-            self.cfg.num_tx_antennas * self.cfg.num_subcarriers, len(csis), order='F'
+            self.cfg.num_tx_antennas * self.cfg.num_subcarriers, HUL_train_n.shape[-1], order='F'
         ).T
-        HUL_train_compl_tmp_mean = np.mean(HUL_train_compl_tmp, axis=0)
-        if set_mean:
-            self.HUL_train_compl_tmp_mean = HUL_train_compl_tmp_mean
-        HUL_train_compl = HUL_train_compl_tmp - HUL_train_compl_tmp_mean
+        if train_mode:
+            self.HUL_train_compl_tmp_mean = np.mean(HUL_train_compl_tmp, axis=0)
+        HUL_train_compl = HUL_train_compl_tmp - self.HUL_train_compl_tmp_mean
         return HUL_train_compl
 
 
