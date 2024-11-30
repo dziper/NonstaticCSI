@@ -1,12 +1,13 @@
 import os
 from dataclasses import dataclass
+import numpy as np
 
 
 @dataclass(frozen=True)
 class Config:
     num_rx_antennas: int
-    num_tx_antennas: int
-    num_subcarriers: int
+    num_tx_antennas: int  # na
+    num_subcarriers: int  # nc
     # Additional options/configurations...
     train_test_split: float
     data_root: str
@@ -18,9 +19,17 @@ class Config:
     kmeans_model_name: str = "kmeans"
     retrain_all: bool = True
 
+    # PCA Config
     reduce_pca_overhead = True
+    max_pca_coeffs = 500        # C
+    compression_ratio = 16      # CR
+
+    # Predictor Config
     null_predictor = False      # If True, disable the CSI predictor, essentially falling back to reference model
     predictor_window_size = 5
+
+    # KMeans/Compressor Config
+    total_bits = 256 * 5        # BTot
 
     @property
     def data_path(self):
@@ -41,3 +50,73 @@ class Config:
     def kmeans_path(self):
         return os.path.join(self.model_root, self.kmeans_model_name)
 
+
+def func_rho(h_hat, h):
+    """
+    Calculate the correlation coefficient between the estimated channel (h_hat)
+    and the actual channel (h).
+
+    Parameters:
+    h_hat (numpy.ndarray): Estimated channel matrix of shape (n, k).
+    h (numpy.ndarray): Actual channel matrix of shape (n, k).
+
+    Returns:
+    float: Average correlation coefficient rho_h.
+    """
+    rho_i = 0
+    n, k = h.shape
+
+    for i in range(k):
+        # Compute the correlation for each column
+        numerator = abs(np.dot(h_hat[:, i].conj().T, h[:, i]))
+        denominator = np.linalg.norm(h_hat[:, i]) * np.linalg.norm(h[:, i])
+        rho_i += numerator / denominator
+
+    # Average the correlation coefficients
+    rho_h = rho_i / k
+    return rho_h
+
+
+def func_gram_schmidt(V):
+    """
+    Perform Gram-Schmidt orthogonalization on the columns of V.
+    The input matrix V (n x k) is replaced by an orthonormal matrix U (n x k)
+    whose columns span the same subspace as V.
+
+    Parameters:
+    V (numpy.ndarray): Input matrix of shape (n, k).
+
+    Returns:
+    U (numpy.ndarray): Orthonormal matrix of shape (n, k).
+    """
+    n, k = V.shape
+    U = np.zeros((n, k), dtype=V.dtype)
+
+    # Normalize the first column
+    U[:, 0] = V[:, 0] / np.linalg.norm(V[:, 0])
+
+    # Iterate through remaining columns
+    for i in range(1, k):
+        U[:, i] = V[:, i]
+        for j in range(i):
+            projection = np.dot(U[:, j].conj().T, U[:, i]) / (np.linalg.norm(U[:, j])**2)
+            U[:, i] -= projection * U[:, j]
+        U[:, i] /= np.linalg.norm(U[:, i])
+
+    return U
+
+
+def func_nmse(h_hat, h):
+    """
+    Calculate the Normalized Mean Squared Error (NMSE) between the estimated
+    channel (h_hat) and the actual channel (h).
+
+    Parameters:
+    h_hat (numpy.ndarray): Estimated channel matrix.
+    h (numpy.ndarray): Actual channel matrix.
+
+    Returns:
+    float: NMSE value.
+    """
+    nmse_h = (np.linalg.norm(h_hat - h, 'fro') / np.linalg.norm(h, 'fro'))**2
+    return nmse_h

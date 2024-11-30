@@ -97,6 +97,7 @@ class Dataset:
 
     # Increase the length of the training data
     def duplicate_and_add_noise(self, times, noise_proportion):
+        # TODO: Use SNR as in reference.ipynb?
         data_fields = [
             "csi_samples",
             "ue_locations",
