@@ -28,7 +28,7 @@ class SimpleSimulator(ABC):
         self.csi_history = []
 
     def get_current_csi_window(self):
-        return self.csi_history[-self.cfg.predictor_window_size:]
+        return np.vstack(self.csi_history[-self.cfg.predictor_window_size:])
 
 
 class DLSimulator(SimpleSimulator):

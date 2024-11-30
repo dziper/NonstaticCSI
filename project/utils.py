@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class Config:
     num_rx_antennas: int
@@ -11,7 +12,7 @@ class Config:
     data_root: str
 
     # For saving and loading models
-    model_root: str = "models"
+    model_root: str = "../models"
     pca_model_name: str = "pca"
     predictor_model_name: str = "predictor"
     kmeans_model_name: str = "kmeans"

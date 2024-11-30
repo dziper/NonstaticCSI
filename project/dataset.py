@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 from utils import Config
 from typing import List, Generator, Tuple
+import pickle
 
 
 # Not sure if we want to group stuff like this into sample
@@ -23,19 +24,20 @@ class DataWindow:
     orient_window: np.ndarray
 
 
-def create_windows_from(data: np.ndarray, window_indexes: List[int], window_size: int):
+def create_windows_from(data: np.ndarray, window_indexes: np.ndarray, window_size: int):
     """
     :param data: N by <any dim>
     :param window_indexes: Indexes of the start of the window. These indexes are not included in the output, only the previous window_size are
     :param window_size: The size of each window
     :return: N by window_size by <any dim>
     """
-    assert all([idx >= window_size for idx in window_indexes])
+    assert np.all(window_indexes >= window_size)
 
     output_shape = (len(window_indexes), window_size) + data.shape[1:]
     output = np.zeros(output_shape, dtype=data.dtype)
 
-    for i, idx in enumerate(window_indexes):
+    for i in range(len(window_indexes)):
+        idx = window_indexes[i]
         output[i] = data[idx - window_size:idx]
 
     return output
@@ -47,7 +49,7 @@ class Dataset:
     ue_velocity: np.ndarray
     antenna_orientations: np.ndarray
 
-    def __init__(self, cfg: Config, csis: np.ndarray, ue_locs: np.ndarray, ue_vels: np.ndarray, antenna_orientations: np.ndarray, window_indexes: List[int]):
+    def __init__(self, cfg: Config, csis: np.ndarray, ue_locs: np.ndarray, ue_vels: np.ndarray, antenna_orientations: np.ndarray, window_indexes: np.ndarray):
         """
         :param csis:            Points to entire array of CSIs
         :param ue_locs:         Points to entire array of Locs
@@ -88,7 +90,7 @@ class Dataset:
             self.orient_windows[index]
         )
 
-    def each_window(self) -> Generator[DataWindow]:
+    def each_window(self) -> Generator[DataWindow, None, None]:
         # Iterate over each Window
         for i in range(len(self)):
             yield self.get_window(i)
@@ -110,14 +112,13 @@ class Dataset:
             duplicated_data = np.repeat(curr, times, axis=0)
             var = np.var(curr)
             noise = np.random.normal(0, var * noise_proportion, duplicated_data.shape)
-            if np.iscomplex(curr):
-                noise += 1j * np.random.normal(0, var * noise_proportion, duplicated_data.shape)
+            if np.any(np.iscomplex(curr)):
+                noise = noise + 1j * np.random.normal(0, var * noise_proportion, duplicated_data.shape)
             setattr(self, name, duplicated_data + noise)
 
 
-def load_data(folder: str) -> Tuple[Dataset, Dataset]:
-    fname = f"batch1_1Lane_450U_{cfg.num_rx_antennas}Rx_{cfg.num_tx_antennas}Tx_1T_{cfg.num_subcarriers}K_2620000000.0fc.pickle"
-    with open(os.path.join(folder, fname), 'rb') as f: # change file link for your machine
+def load_data(cfg: Config) -> Tuple[Dataset, Dataset]:
+    with open(cfg.data_path, "rb") as f:  # change file link for your machine
         data = pickle.load(f)
 
     freq_channel = np.array(data["freq_channel"])
@@ -125,7 +126,6 @@ def load_data(folder: str) -> Tuple[Dataset, Dataset]:
     ue_loc = np.array(data["UE_loc"])
     ue_speed = np.array(data["UE_speed"])
     antenna_orient = np.array(data["antenna_orient"])
-
 
     indices = np.random.permutation(freq_channel.shape[0] - cfg.predictor_window_size) + cfg.predictor_window_size
     # Don't take the beginning window_size because then the windows will be too small.
