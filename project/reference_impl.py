@@ -98,6 +98,7 @@ class ReferenceKmeans(DecodableModel):
         self.matlab.warning('off', 'stats:kmeans:FailedToConverge')
 
         num_train = len(zUL_train)
+        self.original_coeffs = zUL_train.shape[1]
         print("Training k-means clustering...")
 
         # Project data using PCA
@@ -138,6 +139,7 @@ class ReferenceKmeans(DecodableModel):
             self.quantLevels[i] = quantLevelsCSCG[Bs[i] - 1] * np.sqrt(importances[i])
 
     def process(self, zDL: np.ndarray) -> np.ndarray:
+        zDL = zDL[:, :self.num_coeffs]
         quantized_zdl = np.zeros_like(zDL)
         quantLevels = self.quantLevels
         for i in range(zDL.shape[0]):
@@ -148,9 +150,10 @@ class ReferenceKmeans(DecodableModel):
                 quantized_zdl[i, j] = quantLevels[j][vecIdx, 0] + 1j * quantLevels[j][vecIdx, 1]
         return quantized_zdl
 
-    def decode(self, error: np.ndarray) -> np.ndarray:
-        # TODO Kinda confused about process() and decode() for this? Maybe we don't need it
-        return error
+    def decode(self, quantized_zDL: np.ndarray) -> np.ndarray:
+        padded_zDL = np.zeros((len(quantized_zDL), self.original_coeffs), dtype=quantized_zDL.dtype)
+        padded_zDL[:, :self.num_coeffs] = quantized_zDL
+        return padded_zDL
 
     # def decode(self, error: np.ndarray) -> np.ndarray:
     #     for i in range(zDL.shape[0]):
