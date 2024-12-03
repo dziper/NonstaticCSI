@@ -23,16 +23,16 @@ class Config:
     retrain_all: bool = True
 
     # PCA Config
-    reduce_pca_overhead = True
-    max_pca_coeffs = 500        # C
-    compression_ratio = 16      # CR
+    reduce_pca_overhead: bool = True
+    max_pca_coeffs: int = 500        # C
+    compression_ratio: int = 16      # CR
 
     # Predictor Config
-    null_predictor = False      # If True, disable the CSI predictor, essentially falling back to reference model
-    predictor_window_size = 5
+    null_predictor: bool = False      # If True, disable the CSI predictor, essentially falling back to reference model
+    predictor_window_size: int = 5
 
     # KMeans/Compressor Config
-    total_bits = 256 * 5        # BTot
+    total_bits: int = 256 * 5        # BTot
 
     @property
     def data_path(self):

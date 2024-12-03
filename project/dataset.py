@@ -145,3 +145,21 @@ def load_data(cfg: Config) -> Tuple[Dataset, Dataset]:
 
     return train_set, test_set
 
+
+def dataset_from_path(path, cfg) -> Dataset:
+    with open(path, "rb") as f:  # change file link for your machine
+        data = pickle.load(f)
+
+    freq_channel = np.array(data["freq_channel"])
+    freq_channel = np.squeeze(freq_channel)
+    ue_loc = np.array(data["UE_loc"])
+    ue_speed = np.array(data["UE_speed"])
+    antenna_orient = np.array(data["antenna_orient"])
+
+    # indices = np.arange(freq_channel.shape[0])
+    indices = np.arange(freq_channel.shape[0] - cfg.predictor_window_size) + cfg.predictor_window_size
+    # Don't take the beginning window_size because then the windows will be too small.
+
+    train_set = Dataset(cfg, freq_channel, ue_loc, ue_speed, antenna_orient, indices)
+
+    return train_set
