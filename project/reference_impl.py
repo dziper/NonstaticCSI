@@ -31,6 +31,7 @@ class ReferencePCA(DecodableModel):
         HDL_reconst_tmp = np.matmul(zDL, self.coeff_trunc.conj().T)
         HDL_reconst = HDL_reconst_tmp + self.HUL_train_compl_tmp_mean
         HDL_ori_reconst = HDL_reconst.T.reshape(self.cfg.num_tx_antennas, self.cfg.num_subcarriers, len(zDL), order='F')
+        HDL_ori_reconst  = np.transpose(HDL_ori_reconst, (2, 0, 1))
         return HDL_ori_reconst
 
     def load(self, path):
