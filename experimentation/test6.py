@@ -1,3 +1,9 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.api import VAR
+from statsmodels.tsa.stattools import adfuller
+import pickle
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -82,18 +88,11 @@ check_stationarity(magnitudes)
 print("\nChecking stationarity for phase:")
 check_stationarity(phases)
 
-# Plot ACF
-# plot_acf(magnitudes)
-# plt.title('ACF for Magnitude')
-# plt.show()
-
-# plot_acf(phases)
-# plt.title('ACF for Phase')
-# plt.show()
 
 # Find optimal lag order
-lag_order_mag = find_optimal_lag(train_mag)
-lag_order_phase = find_optimal_lag(train_phase)
+max_lag_val = 10
+lag_order_mag = find_optimal_lag(train_mag,max_lag_val)
+lag_order_phase = find_optimal_lag(train_phase,max_lag_val)
 
 print(f"Optimal lag order for magnitude: {lag_order_mag}")
 print(f"Optimal lag order for phase: {lag_order_phase}")
