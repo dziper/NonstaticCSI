@@ -1,4 +1,4 @@
-from project.model import Model, DecodableModel
+from model import Model, DecodableModel
 import numpy as np
 from utils import Config
 from scipy.fftpack import fftn, ifftn
@@ -171,6 +171,27 @@ class ReferenceKmeans(DecodableModel):
 
 
 class NullPredictor(Model):
+    def __init__(self):
+        pass
+
+    def fit(self, csis: np.ndarray, windows: np.ndarray):
+        pass
+
+    def process(self, windows: np.ndarray) -> np.ndarray:
+        """
+        :param windows: N x window_size x na x nc
+        :return:        N x na x nc
+        """
+        new_shape = (windows.shape[0], *windows.shape[2:])
+        return np.zeros(new_shape, dtype=windows.dtype)
+
+    def load(self, path):
+        pass
+
+    def save(self, path):
+        pass
+
+class NewPredictor(Model):
     def __init__(self):
         pass
 
