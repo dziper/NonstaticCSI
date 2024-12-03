@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 @dataclass(frozen=True)
@@ -122,3 +123,39 @@ def func_nmse(h_hat, h):
     """
     nmse_h = (np.linalg.norm(h_hat - h, 'fro') / np.linalg.norm(h, 'fro'))**2
     return nmse_h
+
+
+def reference_nmse_rho_test(HDL_test, HDL_ori_reconst):
+    # Assessing performance
+    print("Assessing performance...")
+
+    nTest = len(HDL_test)
+    nmse = np.zeros(nTest)
+    rho = np.zeros(nTest)
+
+    for i in range(nTest):
+        ch = HDL_test[i]
+        ch_h = HDL_ori_reconst[i]
+        nmse[i] = func_nmse(ch_h, ch)  # Assumes func_nmse is defined
+        rho[i] = func_rho(ch_h, ch)    # Assumes func_rho is defined
+
+    # Plotting results
+    print("Plotting results...")
+    LineW = 1.5
+
+    plt.figure()
+    cdf_nmse = np.sort(10 * np.log10(nmse))
+    cdf_rho = np.sort(10 * np.log10(1 - rho))
+
+    probabilities = np.arange(1, len(cdf_nmse) + 1) / len(cdf_nmse)
+
+    plt.plot(cdf_nmse, probabilities, label='CDF 10log(NMSE)', linewidth=LineW)
+    plt.plot(cdf_rho, probabilities, label='CDF 10log(1-RHO)', linewidth=LineW)
+
+    # plt.xlim([-22, 0])
+    # plt.xticks(range(-22, 1, 2))
+    plt.xlabel('Metric (dB)')
+    plt.ylabel('CDF')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.show()

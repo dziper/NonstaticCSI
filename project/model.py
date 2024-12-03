@@ -28,7 +28,7 @@ class Model(ABC):
 
 class DecodableModel(Model):
     @abstractmethod
-    def decode(self, data: np.ndarray):
+    def decode(self, *args):
         pass
 
 

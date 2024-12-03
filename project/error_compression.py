@@ -588,7 +588,7 @@ if __name__ == "__main__":
     #load the dataset
     train_set, test_set = dataset.load_data(cfg)
 
-    csis = utils.reshape_tensor(train_set.csi_samples, K=1)
+    csis = reshape_tensor(train_set.csi_samples, K=1)
 
     print(f"csis shape: {csis.shape}")
 

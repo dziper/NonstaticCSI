@@ -3,6 +3,59 @@ import numpy as np
 from utils import Config
 from scipy.fftpack import fftn, ifftn
 from tqdm.notebook import tqdm
+from dataset import Dataset
+
+class FullReferenceModel(DecodableModel):
+    def __init__(self, cfg: Config, matlab):
+        self.cfg = cfg
+        self.matlab = matlab
+
+        self.pca = ReferencePCA(cfg, matlab)
+        self.predictor = NullPredictor()
+        # With NullPredictor, prediction_error is just zDL! This lets us test the ref impl
+        self.error_compressor = ReferenceKmeans(cfg, matlab)
+
+    def fit(self, dataset: Dataset):
+        self.pca.fit(dataset.csi_samples)
+        zdl_train = self.pca.process(dataset.csi_samples)                # N * zdl_len
+        zdl_train_windows = self._compute_pca_for_windows(dataset)
+        self.predictor.fit(zdl_train, zdl_train_windows)    # Doesn't do anything, just null predictor
+        predicted_zdl = self.predictor.process(zdl_train_windows)
+
+        prediction_error = zdl_train - predicted_zdl
+        self.error_compressor.fit(prediction_error)
+
+    def process(self, dataset: Dataset) -> np.ndarray:
+        zdl_train = self.pca.process(dataset.csi_samples)                # N * zdl_len
+        zdl_train_windows = self._compute_pca_for_windows(dataset)
+        predicted_zdl = self.predictor.process(zdl_train_windows)
+        prediction_error = zdl_train - predicted_zdl
+        compressed_error = self.error_compressor.process(prediction_error)
+        return compressed_error, zdl_train_windows
+
+    def decode(self, compressed_error: np.ndarray, zdl_test_windows: np.ndarray):
+        ul_pred_error = self.error_compressor.decode(compressed_error)
+        ul_pred_zdl = self.predictor.process(zdl_test_windows)
+        ul_reconst_zdl = ul_pred_error + ul_pred_zdl
+        ul_pred_csi = self.pca.decode(ul_reconst_zdl)
+        return ul_pred_csi
+
+    def load(self, path):
+        pass
+
+    def save(self, path):
+        pass
+
+    def _compute_pca_for_windows(self, dataset: Dataset):
+        windows_shape = dataset.csi_windows.shape                   # N * window_size * na * nc
+        zdl_train_windows = dataset.csi_windows.reshape(            # (N * window_size) * na * nc
+            -1, windows_shape[2], windows_shape[3]
+        )
+        zdl_train_windows = self.pca.process(zdl_train_windows)
+        zdl_train_windows = zdl_train_windows.reshape(
+            windows_shape[0], windows_shape[1], -1
+        )  # N * window_size * zdl_len
+        return zdl_train_windows
 
 
 # TODO: Implement Reference
@@ -99,7 +152,7 @@ class ReferenceKmeans(DecodableModel):
         self.matlab.warning('off', 'stats:kmeans:FailedToConverge')
 
         num_train = len(zUL_train)
-        self.original_coeffs = zUL_train.shape[1]
+        self.num_original_coeffs = zUL_train.shape[1]
         print("Training k-means clustering...")
 
         # Project data using PCA
@@ -152,7 +205,7 @@ class ReferenceKmeans(DecodableModel):
         return quantized_zdl
 
     def decode(self, quantized_zDL: np.ndarray) -> np.ndarray:
-        padded_zDL = np.zeros((len(quantized_zDL), self.original_coeffs), dtype=quantized_zDL.dtype)
+        padded_zDL = np.zeros((len(quantized_zDL), self.num_original_coeffs), dtype=quantized_zDL.dtype)
         padded_zDL[:, :self.num_coeffs] = quantized_zDL
         return padded_zDL
 
