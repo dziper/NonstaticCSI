@@ -1,14 +1,12 @@
-from model import Model, DecodableModel
+from model import DecodableModel
 import numpy as np
 from utils import Config
-from scipy.fftpack import fftn, ifftn
-from tqdm.notebook import tqdm
 from dataset import Dataset
 from reference_impl import ReferencePCA, ReferenceKmeans
-from time_series_prediction_trial import LSTMComplexPredictor, ComplexVectorPreprocessor
+from my_thrash.time_series_prediction_trial import LSTMComplexPredictor, ComplexVectorPreprocessor
 from typing import Tuple
-
-
+from DCT_compression import DCTCompression
+from DFT_compression import DFTCompression
 class FullLSTMModel(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.cfg = cfg
@@ -19,7 +17,9 @@ class FullLSTMModel(DecodableModel):
         self.preprocessor = ComplexVectorPreprocessor(conversion_method="real_imag")
         self.predictor = None
         # With NullPredictor, prediction_error is just zDL! This lets us test the ref impl
-        self.error_compressor = ReferenceKmeans(cfg, matlab)
+        # self.error_compressor = ReferenceKmeans(cfg, matlab)
+        self.error_compressor = DCTCompression(cfg, matlab)
+        # self.error_compressor = DFTCompression(cfg, matlab)
 
     def fit(self, dataset: Dataset):
         print("Fitting the PCA")
@@ -57,7 +57,7 @@ class FullLSTMModel(DecodableModel):
             input_shape=(self.cfg.predictor_window_size, X_train.shape[2]),
             output_shape=X_train.shape[2]
         )
-        self.predictor.train(X_train, y_train)
+        self.predictor.train(X_train, y_train,epochs=self.cfg.epochs)
 
 
     def process(self, dataset: Dataset) -> Tuple[np.ndarray, np.ndarray]:
@@ -70,6 +70,7 @@ class FullLSTMModel(DecodableModel):
         y_pred_denormalized = self.preprocessor.denormalize_features(predicted_zdl_normalized)
         predicted_zdl = self.preprocessor.reconstruct_complex_data(y_pred_denormalized)
 
+        print(f"Predicted zdl: {predicted_zdl.shape}")
         prediction_error = zdl_test[self.cfg.predictor_window_size:] - predicted_zdl
         compressed_error = self.error_compressor.process(prediction_error)
         return compressed_error, X_test
@@ -81,6 +82,8 @@ class FullLSTMModel(DecodableModel):
         ul_pred_zdl = self.preprocessor.denormalize_features(ul_pred_zdl)
         ul_pred_zdl = self.preprocessor.reconstruct_complex_data(ul_pred_zdl)
 
+        print(f"Predicted zdl: {ul_pred_zdl.shape}")
+        print(f"ul_pred_error: {ul_pred_error.shape}")
         ul_reconst_zdl = ul_pred_error + ul_pred_zdl
         ul_pred_csi = self.pca.decode(ul_reconst_zdl)
         return ul_pred_csi, ul_pred_zdl

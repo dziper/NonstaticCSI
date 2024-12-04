@@ -31,10 +31,14 @@ class Config:
     # Predictor Config
     null_predictor: bool = False      # If True, disable the CSI predictor, essentially falling back to reference model
     predictor_window_size: int = 5
+    epochs: int= 10
 
     # KMeans/Compressor Config
-    total_bits: int = 256 * 5        # BTot
+    total_bits: int = 512        # BTot
 
+    #DCT compression
+    float_bits: int = 6
+    compression_rate_dct: float =1
     @property
     def data_path(self):
         return os.path.join(
@@ -126,7 +130,7 @@ def func_nmse(h_hat, h):
     return nmse_h
 
 
-def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst):
+def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst,save_path,btot=512):
     # Assessing performance
     print("Assessing performance...")
 
@@ -161,8 +165,8 @@ def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst):
     plt.grid(True)
     plt.show()
 
-    np.save(f'nmse-{name}.npy', nmse)
-    np.save(f'rho-{name}.npy', rho)
+    np.save(f'{save_path}\\nmse-{name}_Btot_{btot}.npy', nmse)
+    np.save(f'{save_path}\\rho-{name}__Btot_{btot}.npy', rho)
 
 
 def plot_single_zdl(zdl, pca):

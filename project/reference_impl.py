@@ -4,7 +4,7 @@ from utils import Config
 from scipy.fftpack import fftn, ifftn
 from tqdm.notebook import tqdm
 from dataset import Dataset
-
+from DCT_compression import DCTCompression
 class FullReferenceModel(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.cfg = cfg
