@@ -79,14 +79,13 @@ check_stationarity(magnitudes)
 print("\nChecking stationarity for phase:")
 check_stationarity(phases)
 
-# Plot ACF
-# plot_acf(magnitudes)
-# plt.title('ACF for Magnitude')
-# plt.show()
+plot_acf(magnitudes)
+plt.title('ACF for Magnitude')
+plt.show()
 
-# plot_acf(phases)
-# plt.title('ACF for Phase')
-# plt.show()
+plot_acf(phases)
+plt.title('ACF for Phase')
+plt.show()
 
 # Find optimal lag order
 lag_order_mag = find_optimal_lag(train_mag)
