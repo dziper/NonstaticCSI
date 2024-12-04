@@ -77,7 +77,7 @@ class ReferencePCA(DecodableModel):
     def process(self, csis: np.ndarray, train_mode=False) -> np.ndarray:
         H_train = np.transpose(csis, (1, 2, 0))
         HUL_test_compl = self._get_compl(H_train, train_mode=train_mode)
-        return np.dot(HUL_test_compl, self.coeff)  # zDL
+        return np.dot(HUL_test_compl, self.coeff_trunc)  # zDL
 
     def decode(self, zDL: np.ndarray) -> np.ndarray:
         # Go from zdl to csi space
