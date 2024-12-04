@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import pandas as pd
 
 class MobilitySimulation:
     def __init__(self, x_range, y_range,
@@ -63,6 +64,9 @@ class MobilitySimulation:
 
         # File name for saving the trajectory
         self.file_name = file_name
+
+
+        self.loaded_trajectories = []
 
     def _project_onto_road(self, point):
         """
@@ -173,6 +177,23 @@ class MobilitySimulation:
             writer.writerow(['Step', 'X Position', 'Y Position'])
             for step, position in enumerate(self.trajectory):
                 writer.writerow([step, position[0], position[1]])
+    def load_saved_trajectory(self,directory):
+
+        # Create a list to store trajectories
+        self.loaded_trajectories = []
+
+        # Read and sort all trajectory filenames
+        trajectory_files = sorted(
+            [f for f in os.listdir(directory) if f.startswith('trajectory_') and f.endswith('.csv')],
+            key=lambda x: int(x.split('_')[1].split('.')[0])  # Sort by numeric part of the filename
+        )
+
+        # Read each trajectory file and append it to the list
+        for filename in trajectory_files:
+            filepath = os.path.join(directory, filename)
+            trajectory = pd.read_csv(filepath).to_numpy()  # Adjust delimiter if needed
+            trajectory = trajectory[:, 1:]
+            self.loaded_trajectories.append(trajectory)
 
     def plot_trajectory(self):
         """
@@ -203,6 +224,34 @@ class MobilitySimulation:
         plt.grid(True)
         plt.axis('equal')
         plt.show()
+    def plot_loaded_trajectories(self,savedir=False,num_paths=5):
+        """
+        Plot multiple trajectories in a background-free picture, each with a random color.
+
+        Parameters:
+        trajectories (list of np.ndarray): List of trajectories, where each trajectory is a 2D NumPy array.
+        """
+        plt.figure()
+
+        # Plot each trajectory with a random color
+        for trajectory in self.loaded_trajectories[0:num_paths]:
+            trajectory = np.array(trajectory)
+            color = np.random.rand(3, )  # Generate a random RGB color
+            plt.plot(trajectory[:, 0], trajectory[:, 1], color=color, linewidth=2)
+
+
+        # # Background-free settings
+        # plt.axis('off')  # Remove axes
+        # plt.axis('equal')  # Keep aspect ratio
+        # plt.tight_layout()  # Remove unnecessary padding
+        if(savedir):
+            plt.savefig(savedir, format='png',dpi=300)
+        else:
+            plt.show()
+
+
+
+
 
 # Example usage
 sim = MobilitySimulation(
@@ -216,10 +265,19 @@ sim = MobilitySimulation(
     save_folder="simulation_output",
     file_name="custom_trajectory2.csv"
 )
-trajectory, velocities = sim.simulate()
+# trajectory, velocities = sim.simulate()
 # sim.plot_trajectory()
 
-print("Trajectory Start:", trajectory[0])
-print("Trajectory End:", trajectory[-1])
-print("Distance to End Point:", np.linalg.norm(trajectory[-1] - sim.end_point))
-print("Total Trajectory Length:", len(trajectory))
+# print("Trajectory Start:", trajectory[0])
+# print("Trajectory End:", trajectory[-1])
+# print("Distance to End Point:", np.linalg.norm(trajectory[-1] - sim.end_point))
+# print("Total Trajectory Length:", len(trajectory))
+
+
+trajectory_dir = f"C:\\Users\ibrahimkilinc\Documents\ECE257_Project\\NonstaticCSI\Dataset\path_trajectories"
+sim.load_saved_trajectory(trajectory_dir)
+
+sim_res_path = f"C:\\Users\ibrahimkilinc\Documents\ECE257_Project\\NonstaticCSI\simulation_results"
+paths_image_dir = os.path.join(sim_res_path, "paths_image.png")
+
+sim.plot_loaded_trajectories(paths_image_dir,num_paths = 2)
