@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 
 @dataclass(frozen=True)
@@ -125,7 +126,7 @@ def func_nmse(h_hat, h):
     return nmse_h
 
 
-def reference_nmse_rho_test(HDL_test, HDL_ori_reconst):
+def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst):
     # Assessing performance
     print("Assessing performance...")
 
@@ -159,3 +160,13 @@ def reference_nmse_rho_test(HDL_test, HDL_ori_reconst):
     plt.legend(loc='lower right')
     plt.grid(True)
     plt.show()
+
+    np.save(f'nmse-{name}.npy', nmse)
+    np.save(f'rho-{name}.npy', rho)
+
+
+def plot_single_zdl(zdl, pca):
+    plt.figure()
+    zdl = np.expand_dims(zdl, axis=0)
+    recovered = pca.decode(zdl)
+    plt.imshow(np.squeeze(np.abs(recovered)))
