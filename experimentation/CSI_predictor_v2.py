@@ -75,21 +75,21 @@ def train_evaluate_model(train_data, test_data, lag_order, component_name):
 train_size = int(0.99 * len(magnitudes))
 train_mag, test_mag = magnitudes[:train_size], magnitudes[train_size:]
 train_phase, test_phase = phases[:train_size], phases[train_size:]
-
+print(np.array(magnitudes).shape)
 # Check stationarity
-print("Checking stationarity for magnitude:")
-check_stationarity(magnitudes)
-print("\nChecking stationarity for phase:")
-check_stationarity(phases)
+# print("Checking stationarity for magnitude:")
+# check_stationarity(magnitudes)
+# print("\nChecking stationarity for phase:")
+# check_stationarity(phases)
 
 # Plot ACF
-# plot_acf(magnitudes)
-# plt.title('ACF for Magnitude')
-# plt.show()
+plot_acf(magnitudes)
+plt.title('ACF for Magnitude')
+plt.show()
 
-# plot_acf(phases)
-# plt.title('ACF for Phase')
-# plt.show()
+plot_acf(phases)
+plt.title('ACF for Phase')
+plt.show()
 
 # Find optimal lag order
 lag_order_mag = find_optimal_lag(train_mag)

@@ -84,13 +84,13 @@ print("\nChecking stationarity for imag_part:")
 check_stationarity(imag_part)
 
 # Plot ACF
-# plot_acf(real_part)
-# plt.title('ACF for real_part')
-# plt.show()
+plot_acf(real_part)
+plt.title('ACF for real_part')
+plt.show()
 
-# plot_acf(imag_part)
-# plt.title('ACF for imag_part')
-# plt.show()
+plot_acf(imag_part)
+plt.title('ACF for imag_part')
+plt.show()
 
 # Find optimal lag order
 lag_order_mag = find_optimal_lag(train_mag)
