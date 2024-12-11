@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+from typing import Optional, Literal
 
 
 @dataclass(frozen=True)
@@ -13,10 +14,12 @@ class Config:
     # Additional options/configurations...
     train_test_split: float
     data_root: str
+    results_save_path: str
     duplicate_data: int = 5
     data_snr: float = 100.0
 
     # For saving and loading models
+    results_save_path: Optional[str] = None
     model_root: str = "../models"
     pca_model_name: str = "pca"
     predictor_model_name: str = "predictor"
@@ -31,14 +34,15 @@ class Config:
     # Predictor Config
     null_predictor: bool = False      # If True, disable the CSI predictor, essentially falling back to reference model
     predictor_window_size: int = 5
-    epochs: int= 10
+    epochs: int = 10
 
     # KMeans/Compressor Config
     total_bits: int = 512        # BTot
+    compressor_type: Literal["kmeans", "dct", "dft"] = "kmeans"
 
     #DCT compression
     float_bits: int = 6
-    compression_rate_dct: float =1
+    compression_rate_dct: float = 1
     @property
     def data_path(self):
         return os.path.join(
@@ -130,7 +134,7 @@ def func_nmse(h_hat, h):
     return nmse_h
 
 
-def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst,save_path,btot=512):
+def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst, save_path: Optional[str]=None, btot=512):
     # Assessing performance
     print("Assessing performance...")
 
@@ -165,8 +169,9 @@ def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst,save_path,btot=512):
     plt.grid(True)
     plt.show()
 
-    np.save(f'{save_path}\\nmse-{name}_Btot_{btot}.npy', nmse)
-    np.save(f'{save_path}\\rho-{name}__Btot_{btot}.npy', rho)
+    if save_path is not None:
+        np.save(os.path.join(save_path, f'nmse-{name}_Btot_{btot}.npy'), nmse)
+        np.save(os.path.join(save_path, f'rho-{name}_Btot_{btot}.npy'), nmse)
 
 
 def plot_single_zdl(zdl, pca):

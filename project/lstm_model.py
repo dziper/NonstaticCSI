@@ -3,10 +3,13 @@ import numpy as np
 from utils import Config
 from dataset import Dataset
 from reference_impl import ReferencePCA, ReferenceKmeans
-from my_thrash.time_series_prediction_trial import LSTMComplexPredictor, ComplexVectorPreprocessor
+from preprocessor import ComplexVectorPreprocessor
 from typing import Tuple
 from DCT_compression import DCTCompression
 from DFT_compression import DFTCompression
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
 class FullLSTMModel(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.cfg = cfg
@@ -17,9 +20,15 @@ class FullLSTMModel(DecodableModel):
         self.preprocessor = ComplexVectorPreprocessor(conversion_method="real_imag")
         self.predictor = None
         # With NullPredictor, prediction_error is just zDL! This lets us test the ref impl
-        # self.error_compressor = ReferenceKmeans(cfg, matlab)
-        self.error_compressor = DCTCompression(cfg, matlab)
-        # self.error_compressor = DFTCompression(cfg, matlab)
+
+        if cfg.compressor_type == "kmeans":
+            self.error_compressor = ReferenceKmeans(cfg, matlab)
+        elif cfg.compressor_type == "dct":
+            self.error_compressor = DCTCompression(cfg, matlab)
+        elif cfg.compressor_type == "dft":
+            self.error_compressor = DFTCompression(cfg, matlab)
+        else:
+            assert False, f"Unrecognized Compressor Type for LSTM Model {cfg.compressor_type}"
 
     def fit(self, dataset: Dataset):
         print("Fitting the PCA")
@@ -58,7 +67,6 @@ class FullLSTMModel(DecodableModel):
             output_shape=X_train.shape[2]
         )
         self.predictor.train(X_train, y_train,epochs=self.cfg.epochs)
-
 
     def process(self, dataset: Dataset) -> Tuple[np.ndarray, np.ndarray]:
         zdl_test = self.pca.process(dataset.csi_samples)                # N * zdl_len
@@ -104,4 +112,61 @@ class FullLSTMModel(DecodableModel):
             windows_shape[0], windows_shape[1], -1
         )  # N * window_size * zdl_len
         return zdl_train_windows
+
+
+
+class LSTMComplexPredictor:
+    def __init__(self, input_shape, output_shape, units=100):
+        """
+        Initialize LSTM model for complex vector prediction
+
+        Args:
+            input_shape (tuple): Shape of input data
+            output_shape (int): Number of output features
+            units (int): Number of LSTM units
+        """
+        self.model = self._build_model(input_shape, output_shape, units)
+
+    def _build_model(self, input_shape, output_shape, units):
+        """
+        Build LSTM model architecture
+
+        Args:
+            input_shape (tuple): Shape of input data
+            output_shape (int): Number of output features
+            units (int): Number of LSTM units
+
+        Returns:
+            tf.keras.Model: Compiled LSTM model
+        """
+        model = Sequential([
+            LSTM(units, input_shape=input_shape, return_sequences=False),
+            Dense(output_shape)
+        ])
+        model.compile(optimizer='adam', loss='mse')
+        return model
+
+    def train(self, X_train, y_train, epochs=30, batch_size=16):
+        """
+        Train the LSTM model
+
+        Args:
+            X_train (np.ndarray): Training input samples
+            y_train (np.ndarray): Training labels
+            epochs (int): Number of training epochs
+            batch_size (int): Training batch size
+        """
+        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
+
+    def predict(self, X_test):
+        """
+        Make predictions using the trained model
+
+        Args:
+            X_test (np.ndarray): Test input samples
+
+        Returns:
+            np.ndarray: Predicted values
+        """
+        return self.model.predict(X_test)
 
