@@ -168,6 +168,7 @@ class ReferenceKmeans(DecodableModel):
         ))
         self.num_coeffs = len(Bs)
 
+        self.allocated_bits = Bs
         # Scale data for k-means clustering
         zUL_train_entries_scaled = np.zeros((num_train, self.num_coeffs, 2))
         for i in range(self.num_coeffs):

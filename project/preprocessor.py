@@ -2,7 +2,7 @@ import numpy as np
 
 
 class ComplexVectorPreprocessor:
-    def __init__(self, conversion_method='real_imag'):
+    def __init__(self,normalization = "mean_std",conversion_method='real_imag'):
         """
         Initialize the preprocessor with conversion method and normalization tracking
 
@@ -11,6 +11,7 @@ class ComplexVectorPreprocessor:
                                      ('real_imag' or 'amplitude_angle')
         """
         self.conversion_method = conversion_method
+        self.normalization = normalization
         self.normalization_factors = {}
 
     def convert_complex_to_features(self, complex_data):
@@ -40,9 +41,16 @@ class ComplexVectorPreprocessor:
         Returns:
             self: Allows method chaining
         """
-        for i in range(features.shape[1]):
-            max_val = np.max(np.abs(features[:, i]))
-            self.normalization_factors[i] = max_val
+
+        if(self.normalization == 'mean_std'):
+            for i in range(features.shape[1]):
+                mean = np.mean(features[:, i])
+                std = np.std(features[:, i])
+                self.normalization_factors[i] = {"mean":mean,"std":std}
+        else:
+            for i in range(features.shape[1]):
+                max_val = np.max(features[:, i])
+                self.normalization_factors[i] = max_val
 
         return self
 
@@ -59,19 +67,36 @@ class ComplexVectorPreprocessor:
         """
         normalized_features = np.zeros_like(features)
 
-        for i in range(features.shape[1]):
-            if apply_existing:
-                # Use pre-computed normalization factor from training data
-                if i not in self.normalization_factors:
-                    raise ValueError(f"Normalization factor for feature {i} not found. Call fit_normalization() first.")
-                max_val = self.normalization_factors[i]
-            else:
-                # Compute new normalization factor
-                max_val = np.max(np.abs(features[:, i]))
-                self.normalization_factors[i] = max_val
+        if(self.normalization == "max"):
+            for i in range(features.shape[1]):
+                if apply_existing:
+                    # Use pre-computed normalization factor from training data
+                    if i not in self.normalization_factors:
+                        raise ValueError(f"Normalization factor for feature {i} not found. Call fit_normalization() first.")
+                    max_val = self.normalization_factors[i]
+                else:
+                    # Compute new normalization factor
+                    max_val = np.max(features[:, i])
+                    self.normalization_factors[i] = max_val
 
-            # Normalize using the selected max value
-            normalized_features[:, i] = features[:, i] / (max_val + 1e-8)
+                # Normalize using the selected max value
+                normalized_features[:, i] = features[:, i] / (max_val + 1e-12)
+        else:
+            for i in range(features.shape[1]):
+                if apply_existing:
+                    # Use pre-computed normalization factor from training data
+                    if i not in self.normalization_factors:
+                        raise ValueError(
+                            f"Normalization factor for feature {i} not found. Call fit_normalization() first.")
+                    mean = self.normalization_factors[i]["mean"]
+                    std = self.normalization_factors[i]["std"]
+                else:
+                    mean = np.mean(features[:, i])
+                    std = np.std(features[:, i])
+                    self.normalization_factors[i] = {"mean": mean, "std": std}
+
+                # Normalize using the selected max value
+                normalized_features[:, i] = (features[:, i]-mean) / std
 
         return normalized_features
 
@@ -87,9 +112,15 @@ class ComplexVectorPreprocessor:
         """
         denormalized_features = np.zeros_like(normalized_features)
 
-        for i in range(normalized_features.shape[1]):
-            max_val = self.normalization_factors[i]
-            denormalized_features[:, i] = normalized_features[:, i] * (max_val + 1e-8)
+        if(self.normalization == "max"):
+            for i in range(normalized_features.shape[1]):
+                max_val = self.normalization_factors[i]
+                denormalized_features[:, i] = normalized_features[:, i] * (max_val + 1e-8)
+        else:
+            for i in range(normalized_features.shape[1]):
+                mean = self.normalization_factors[i]["mean"]
+                std = self.normalization_factors[i]["std"]
+                denormalized_features[:, i] = normalized_features[:, i] * std + mean
 
         return denormalized_features
 

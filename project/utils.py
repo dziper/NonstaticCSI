@@ -27,6 +27,7 @@ class Config:
     kmeans_model_name: str = "kmeans"
     retrain_all: bool = True
 
+
     # PCA Config
     reduce_pca_overhead: bool = True
     max_pca_coeffs: int = 500        # C
@@ -41,6 +42,7 @@ class Config:
     total_bits: int = 512        # BTot
     compressor_type: Literal["kmeans", "dct", "dft"] = "kmeans"
     preprocessor_type: Literal["real_imag", "amplitude_angle"] = "real_imag"
+    normalization_type: Literal["mean_std", "max"] = "mean_std"
 
     #DCT compression
     float_bits: int = 6
@@ -199,6 +201,9 @@ def add_noise(H,snr):
     :param snr: in linear
     :return:
     """
+    if(snr==-1):
+        return H
+
     H_power = np.mean(np.abs(H)**2,axis=(1,2)).reshape(H.shape[0],-1)
     N_power = H_power/snr
 

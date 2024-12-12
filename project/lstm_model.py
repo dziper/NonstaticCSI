@@ -1,4 +1,4 @@
-from model import DecodableModel, Model
+from model import DecodableModel,Model
 import numpy as np
 from utils import Config
 from dataset import Dataset
@@ -8,9 +8,24 @@ from typing import Tuple
 from DCT_compression import DCTCompression
 from DFT_compression import DFTCompression
 from tensorflow.keras.models import Sequential
+import tensorflow.keras.models as models
 from tensorflow.keras.layers import LSTM, Dense
 import copy
 from tqdm.notebook import tqdm
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten,Dropout
+from tensorflow.keras.layers import Input, Dense, MultiHeadAttention, LayerNormalization
+import  tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+print(f"GPUs {gpus}")
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        print("Memory growth enabled for GPUs.")
+    except RuntimeError as e:
+        print(f"RuntimeError: {e}")
+
+
 
 
 class FullLSTMModel(DecodableModel):
@@ -20,7 +35,7 @@ class FullLSTMModel(DecodableModel):
 
         print("This is the LSTM")
         self.pca = ReferencePCA(cfg, matlab)
-        self.preprocessor = ComplexVectorPreprocessor(conversion_method=cfg.preprocessor_type)
+        self.preprocessor = ComplexVectorPreprocessor(normalization=cfg.normalization_type,conversion_method=cfg.preprocessor_type)
         self.predictor = None
         # With NullPredictor, prediction_error is just zDL! This lets us test the ref impl
 
@@ -210,11 +225,65 @@ class LSTMComplexPredictor:
         Returns:
             tf.keras.Model: Compiled LSTM model
         """
+
+        """model 0"""
         model = Sequential([
             LSTM(units, input_shape=input_shape, return_sequences=False),
             Dense(output_shape)
         ])
         model.compile(optimizer='adam', loss='mse')
+
+        """model 1"""
+        # model = Sequential([
+        #     Conv1D(filters=units, kernel_size=3, activation='relu', input_shape=input_shape),
+        #     MaxPooling1D(pool_size=2),
+        #     LSTM(128, return_sequences=True),
+        #     Dropout(0.2),
+        #     LSTM(64),
+        #     Dense(output_shape, activation='relu')
+        # ])
+
+
+        """model 2"""
+        # model = Sequential([
+        #     LSTM(units, input_shape=input_shape, return_sequences=False),  # Encodes the temporal dependencies
+        #     Dropout(0.2),
+        #     Dense(256, activation='relu'),  # Captures high-dimensional feature interactions
+        #     Dropout(0.2),
+        #     Dense(1000)  # Predicts 1,000 features for the next time step
+        # ])
+        # model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+        # model.summary()
+        #
+
+
+
+
+        # # Input shape: 5 time steps, 1000 features
+        # input_layer = Input(shape=input_shape)
+        #
+        # # Multi-head attention
+        # attention_output = MultiHeadAttention(num_heads=8, key_dim=64)(input_layer, input_layer)
+        #
+        # # Layer normalization
+        # attention_output = LayerNormalization()(attention_output)
+        #
+        # # Flatten to prepare for dense layers
+        # flatten_layer = Flatten()(attention_output)
+        #
+        # # Dense layers for feature transformation
+        # dense_layer = Dense(512, activation='relu')(flatten_layer)
+        # dense_layer = Dropout(0.2)(dense_layer)
+        #
+        # # Output layer
+        # output_layer = Dense(1000)(dense_layer)
+        #
+        # # Define model
+        # model = models.Model(inputs=input_layer, outputs=output_layer)
+        # model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+        # model.summary()
+
+
         return model
 
     def train(self, X_train, y_train, epochs=30, batch_size=16):
@@ -227,7 +296,7 @@ class LSTMComplexPredictor:
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
         """
-        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=0)
+        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
 
     def predict(self, X_test):
         """
