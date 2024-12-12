@@ -7,6 +7,10 @@ def run_model(cfg: Config, matlab, model_class, result_name, simulation=False, s
     print(f"Running Model {result_name}, btot {cfg.total_bits}, pred_size {cfg.predictor_window_size}")
     train_set = dataset.dataset_from_path(os.path.join(cfg.data_root, "train_set.pickle"), cfg)
     test_set = dataset.dataset_from_path(os.path.join(cfg.data_root, "test_set.pickle"), cfg)
+    print(f"Noise is added to the test and train samples train snr {cfg.train_snr} in linear , test snr {cfg.test_snr} in linear")
+    train_set.csi_samples = utils.add_noise(train_set.csi_samples, cfg.train_snr)
+    test_set.csi_samples = utils.add_noise(test_set.csi_samples, cfg.test_snr)
+
     model = model_class(cfg, matlab)
 
     model.fit(train_set)
