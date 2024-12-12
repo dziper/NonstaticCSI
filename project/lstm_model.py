@@ -86,7 +86,7 @@ class FullLSTMModel(DecodableModel):
         compressed_error = self.error_compressor.process(prediction_error)
         return compressed_error, X_test
 
-    def decode(self, compressed_error: np.ndarray, X_test: np.ndarray):
+    def decode(self, compressed_error: np.ndarray, X_test: np.ndarray, return_zdl=False):
         ul_pred_error = self.error_compressor.decode(compressed_error)
 
         ul_pred_zdl = self.predictor.predict(X_test)
@@ -97,7 +97,9 @@ class FullLSTMModel(DecodableModel):
         print(f"ul_pred_error: {ul_pred_error.shape}")
         ul_reconst_zdl = ul_pred_error + ul_pred_zdl
         ul_pred_csi = self.pca.decode(ul_reconst_zdl)
-        return ul_pred_csi, ul_pred_zdl
+        if return_zdl:
+            return ul_pred_csi, ul_pred_zdl
+        return ul_pred_csi
 
     def get_initial_history(self, dataset: Dataset):
         initial_history = dataset.csi_samples[0:self.cfg.predictor_window_size]

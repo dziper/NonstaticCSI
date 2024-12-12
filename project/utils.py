@@ -138,7 +138,7 @@ def func_nmse(h_hat, h):
     return nmse_h
 
 
-def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst, save_path: Optional[str]=None, btot=512):
+def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst, save_path: Optional[str]=None, btot=512, show_plot=True):
     # Assessing performance
     print("Assessing performance...")
 
@@ -156,22 +156,24 @@ def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst, save_path: Optional
     print("Plotting results...")
     LineW = 1.5
 
-    plt.figure()
     cdf_nmse = np.sort(10 * np.log10(nmse))
     cdf_rho = np.sort(10 * np.log10(1 - rho))
 
     probabilities = np.arange(1, len(cdf_nmse) + 1) / len(cdf_nmse)
 
-    plt.plot(cdf_nmse, probabilities, label='CDF 10log(NMSE)', linewidth=LineW)
-    plt.plot(cdf_rho, probabilities, label='CDF 10log(1-RHO)', linewidth=LineW)
+    if show_plot:
+        plt.figure()
+        plt.plot(cdf_nmse, probabilities, label='CDF 10log(NMSE)', linewidth=LineW)
+        plt.plot(cdf_rho, probabilities, label='CDF 10log(1-RHO)', linewidth=LineW)
 
-    # plt.xlim([-22, 0])
-    # plt.xticks(range(-22, 1, 2))
-    plt.xlabel('Metric (dB)')
-    plt.ylabel('CDF')
-    plt.legend(loc='lower right')
-    plt.grid(True)
-    plt.show()
+        # plt.xlim([-22, 0])
+        # plt.xticks(range(-22, 1, 2))
+        plt.xlabel('Metric (dB)')
+        plt.ylabel('CDF')
+        plt.legend(loc='lower right')
+        plt.title(f"{name}_Btot_{btot}")
+        plt.grid(True)
+        plt.show()
 
     if save_path is not None:
         np.save(os.path.join(save_path, f'nmse-{name}_Btot_{btot}.npy'), nmse)
