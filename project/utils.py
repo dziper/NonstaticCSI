@@ -16,7 +16,8 @@ class Config:
     data_root: str
     results_save_path: str
     duplicate_data: int = 5
-    data_snr: float = 100.0
+    train_snr: float = 10 #10dB
+    test_snr: float = 10 #10dB
 
     # For saving and loading models
     results_save_path: Optional[str] = None
@@ -46,6 +47,10 @@ class Config:
     compression_rate_dct: float = 1
 
     trunc_lstm_pred: int = 20
+
+    def __post_init__(self):
+        if(not os.path.isdir(self.results_save_path)):
+            os.makedirs(self.results_save_path)
 
     @property
     def data_path(self):
@@ -185,3 +190,20 @@ def plot_single_zdl(zdl, pca):
     zdl = np.expand_dims(zdl, axis=0)
     recovered = pca.decode(zdl)
     plt.imshow(np.squeeze(np.abs(recovered)))
+
+
+def add_noise(H,snr):
+    """
+
+    :param H:
+    :param snr: in linear
+    :return:
+    """
+    H_power = np.mean(np.abs(H)**2,axis=(1,2)).reshape(H.shape[0],-1)
+    N_power = H_power/snr
+
+    N = (np.random.randn(*H.shape) + 1j*np.random.randn(*H.shape))
+    for i in range(N.shape[0]):
+        N[i] = N[i]*np.sqrt(N_power[i]/2)
+
+    return H+N
