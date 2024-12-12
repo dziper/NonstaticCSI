@@ -18,7 +18,7 @@ class SimpleSimulator(ABC):
 
     def add_history(self, zdl):
         self.csi_history.append(zdl)
-        if self.csi_history > self.cfg.predictor_window_size:
+        if len(self.csi_history) > self.cfg.predictor_window_size:
             self.csi_history.pop(0)
 
     def set_history(self, csi_history: List[np.ndarray]):

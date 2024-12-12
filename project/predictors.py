@@ -35,3 +35,27 @@ class VARPredictor(Model):
 
     def save(self, path):
         pass
+
+
+class TopVARPredictor(VARPredictor):
+    def __init__(self, cfg: Config, num_components):
+        super().__init__(cfg)
+        self.num_components = num_components
+
+    def fit(self, data):
+        data = data[:, :self.num_components]
+        super().fit(data)
+
+    def process(self, data) -> np.ndarray:
+        orig_zeros = np.zeros((data.shape[1],), dtype=data.dtype)
+        data = data[:, :self.num_components]
+        out = super().process(data)
+        orig_zeros[:self.num_components] = out
+        return orig_zeros
+
+    def load(self, path):
+        pass
+
+    def save(self, path):
+        pass
+

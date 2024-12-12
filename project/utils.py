@@ -39,10 +39,14 @@ class Config:
     # KMeans/Compressor Config
     total_bits: int = 512        # BTot
     compressor_type: Literal["kmeans", "dct", "dft"] = "kmeans"
+    preprocessor_type: Literal["real_imag", "amplitude_angle"] = "real_imag"
 
     #DCT compression
     float_bits: int = 6
     compression_rate_dct: float = 1
+
+    trunc_lstm_pred: int = 20
+
     @property
     def data_path(self):
         return os.path.join(
