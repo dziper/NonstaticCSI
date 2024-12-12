@@ -9,6 +9,9 @@ from DCT_compression import DCTCompression
 from DFT_compression import DFTCompression
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+import copy
+from tqdm.notebook import tqdm
+
 
 class FullLSTMModel(DecodableModel):
     def __init__(self, cfg: Config, matlab):
@@ -52,14 +55,14 @@ class FullLSTMModel(DecodableModel):
         # Convert train data
         train_features = self.preprocessor.convert_complex_to_features(zdl)
         # Fit normalization factors on training data
-        self.preprocessor.fit_normalization(train_features)
+        if not apply_existing:
+            self.preprocessor.fit_normalization(train_features)
         # Normalize train features using fitted factors
         train_normalized = self.preprocessor.normalize_features(train_features, apply_existing=apply_existing)
         # Create windowed samples
         window_size = self.cfg.predictor_window_size
         X_train, y_train = self.preprocessor.create_windowed_samples(train_normalized, window_size)
         return X_train, y_train
-
 
     def _fit_LSTM(self, X_train, y_train):
         self.predictor = LSTMComplexPredictor(
@@ -95,6 +98,72 @@ class FullLSTMModel(DecodableModel):
         ul_reconst_zdl = ul_pred_error + ul_pred_zdl
         ul_pred_csi = self.pca.decode(ul_reconst_zdl)
         return ul_pred_csi, ul_pred_zdl
+
+    def get_initial_history(self, dataset: Dataset):
+        initial_history = dataset.csi_samples[0:self.cfg.predictor_window_size]
+        initial_history = self.pca.process(initial_history)
+        initial_history = self.preprocessor.convert_complex_to_features(initial_history)
+        initial_history = self.preprocessor.normalize_features(initial_history, apply_existing=True)
+        return [initial_history[i] for i in range(len(initial_history))]
+
+    def simulate_ue(self, dataset: Dataset, initial_history) -> np.ndarray:
+        norm_zdl_history = copy.copy(initial_history)
+        compressed_errors = []
+        # History starts with initial "truth" or
+
+        for i in tqdm(range(self.cfg.predictor_window_size, len(dataset))):
+            # PCA -> Preproc -> Predict(Hist) -> KMeans
+            new_csi = dataset.csi_samples[i:i+1]
+            new_zdl = self.pca.process(new_csi)
+
+            history_now = np.expand_dims(np.array(norm_zdl_history[-self.cfg.predictor_window_size:]), 0)
+            print(history_now.shape)
+            predicted_zdl_normalized = self.predictor.predict(history_now)
+
+            y_pred_denormalized = self.preprocessor.denormalize_features(predicted_zdl_normalized)
+            predicted_zdl = self.preprocessor.reconstruct_complex_data(y_pred_denormalized)
+
+            prediction_error = new_zdl - predicted_zdl
+            compressed_error = self.error_compressor.process(prediction_error)
+
+            compressed_errors.append(compressed_error.squeeze())
+
+            # Simulate the reconstruction on BS
+            decompressed_error = self.error_compressor.decode(compressed_error)
+            reconstructed_zdl = decompressed_error + predicted_zdl
+
+            # Normalize the ZDL before saving it to history
+            train_features = self.preprocessor.convert_complex_to_features(reconstructed_zdl)
+            normalized_zdl = self.preprocessor.normalize_features(train_features, apply_existing=True)
+
+            norm_zdl_history.append(normalized_zdl.squeeze())
+
+        return np.array(compressed_errors)
+
+    def simulate_bs(self, compressed_errors, initial_csi_history):
+        norm_zdl_history = copy.copy(initial_csi_history)
+        pred_csis = []
+
+        for i in tqdm(range(len(compressed_errors))):
+            new_err = compressed_errors[i:i+1]
+            ul_pred_error = self.error_compressor.decode(new_err)
+
+            history_now = np.expand_dims(np.array(norm_zdl_history[-self.cfg.predictor_window_size:]), 0)
+            ul_pred_zdl = self.predictor.predict(history_now)
+            ul_pred_zdl = self.preprocessor.denormalize_features(ul_pred_zdl)
+            ul_pred_zdl = self.preprocessor.reconstruct_complex_data(ul_pred_zdl)
+
+            ul_reconst_zdl = ul_pred_error + ul_pred_zdl
+            ul_pred_csi = self.pca.decode(ul_reconst_zdl)
+
+            pred_csis.append(ul_pred_csi.squeeze())
+
+            # Normalize the ZDL before saving it to history
+            train_features = self.preprocessor.convert_complex_to_features(ul_reconst_zdl)
+            normalized_zdl = self.preprocessor.normalize_features(train_features, apply_existing=True)
+            norm_zdl_history.append(normalized_zdl.squeeze())
+
+        return np.array(pred_csis)
 
     def load(self, path):
         pass
@@ -156,7 +225,7 @@ class LSTMComplexPredictor:
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
         """
-        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
+        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=0)
 
     def predict(self, X_test):
         """
@@ -168,7 +237,7 @@ class LSTMComplexPredictor:
         Returns:
             np.ndarray: Predicted values
         """
-        return self.model.predict(X_test)
+        return self.model.predict(X_test, verbose=0)
 
 
 class HistoryPredictor(Model):
