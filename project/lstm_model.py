@@ -341,7 +341,7 @@ class SimpleHistoryModel(DecodableModel):
         print(f"ul_pred_error: {ul_pred_error.shape}")
         ul_reconst_zdl = ul_pred_error + ul_pred_zdl
         ul_pred_csi = self.pca.decode(ul_reconst_zdl)
-        return ul_pred_csi, ul_pred_zdl
+        return ul_pred_csi
 
     def load(self, path):
         pass
@@ -469,7 +469,7 @@ class TruncatedLSTMModel(DecodableModel):
         print(f"ul_pred_error: {ul_pred_error.shape}")
         ul_reconst_zdl = ul_pred_error + ul_pred_zdl
         ul_pred_csi = self.pca.decode(ul_reconst_zdl)
-        return ul_pred_csi, ul_pred_zdl
+        return ul_pred_csi
 
     def load(self, path):
         pass
