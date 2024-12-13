@@ -184,7 +184,9 @@ def reference_nmse_rho_test(name, HDL_test, HDL_ori_reconst, save_path: Optional
 
     if save_path is not None:
         np.save(os.path.join(save_path, f'nmse-{name}_Btot_{btot}.npy'), nmse)
-        np.save(os.path.join(save_path, f'rho-{name}_Btot_{btot}.npy'), nmse)
+        np.save(os.path.join(save_path, f'rho-{name}_Btot_{btot}.npy'), rho)
+
+    return nmse
 
 
 def plot_single_zdl(zdl, pca):

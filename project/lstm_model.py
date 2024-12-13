@@ -134,7 +134,6 @@ class FullLSTMModel(DecodableModel):
             new_zdl = self.pca.process(new_csi)
 
             history_now = np.expand_dims(np.array(norm_zdl_history[-self.cfg.predictor_window_size:]), 0)
-            print(history_now.shape)
             predicted_zdl_normalized = self.predictor.predict(history_now)
 
             y_pred_denormalized = self.preprocessor.denormalize_features(predicted_zdl_normalized)

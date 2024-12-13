@@ -141,8 +141,8 @@ def load_data(cfg: Config) -> Tuple[Dataset, Dataset]:
     train_set = Dataset(cfg, freq_channel, ue_loc, ue_speed, antenna_orient, train_indices)
     test_set = Dataset(cfg, freq_channel, ue_loc, ue_speed, antenna_orient, test_indices)
 
-    train_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.data_snr)
-    test_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.data_snr)
+    train_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.train_snr)
+    test_set.duplicate_and_add_noise(cfg.duplicate_data, 1.0/cfg.test_snr)
 
     return train_set, test_set
 

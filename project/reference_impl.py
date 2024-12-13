@@ -1,10 +1,17 @@
+"""
+This file contains our implementation of the model from https://github.com/matteonerini/ml-based-csi-feedback
+To ensure consistent behavior with the reference, some components call matlab functions using matlab.engine
+"""
+
 from model import Model, DecodableModel
 import numpy as np
 from utils import Config
 from scipy.fftpack import fftn, ifftn
 from tqdm.notebook import tqdm
 from dataset import Dataset
-from DCT_compression import DCTCompression
+from typing import Tuple
+
+
 class FullReferenceModel(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.cfg = cfg
@@ -25,7 +32,7 @@ class FullReferenceModel(DecodableModel):
         prediction_error = zdl_train - predicted_zdl
         self.error_compressor.fit(prediction_error)
 
-    def process(self, dataset: Dataset) -> np.ndarray:
+    def process(self, dataset: Dataset) -> Tuple[np.ndarray, np.ndarray]:
         zdl_train = self.pca.process(dataset.csi_samples)                # N * zdl_len
         zdl_train_windows = self._compute_pca_for_windows(dataset)
         predicted_zdl = self.predictor.process(zdl_train_windows)
@@ -58,7 +65,6 @@ class FullReferenceModel(DecodableModel):
         return zdl_train_windows
 
 
-# TODO: Implement Reference
 class ReferencePCA(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.matlab = matlab
@@ -138,10 +144,9 @@ class ReferencePCA(DecodableModel):
         # Orthogonalize using Gram-Schmidt
         self.coeff = np.array(
             self.matlab.func_gram_schmidt(self.coeff[:, :500])
-        )  # TODO Py gram_schmidt not working, matlab.func_gram_schmidt is working
+        )
 
 
-# TODO: Implement Reference
 class ReferenceKmeans(DecodableModel):
     def __init__(self, cfg: Config, matlab):
         self.cfg = cfg
@@ -210,14 +215,6 @@ class ReferenceKmeans(DecodableModel):
         padded_zDL[:, :self.num_coeffs] = quantized_zDL
         return padded_zDL
 
-    # def decode(self, error: np.ndarray) -> np.ndarray:
-    #     for i in range(zDL.shape[0]):
-    #         for j in range(zDL.shape[1]):
-    #             # Find the closest quantization level
-    #             distances = np.abs(zDL[i, j] - (quantLevels[j][:, 0] + 1j * quantLevels[j][:, 1]))
-    #             vecIdx = np.argmin(distances)
-    #             zDL[i, j] = quantLevels[j][vecIdx, 0] + 1j * quantLevels[j][vecIdx, 1]
-
     def load(self, path):
         pass
 
@@ -245,26 +242,4 @@ class NullPredictor(Model):
 
     def save(self, path):
         pass
-
-class NewPredictor(Model):
-    def __init__(self):
-        pass
-
-    def fit(self, csis: np.ndarray, windows: np.ndarray):
-        pass
-
-    def process(self, windows: np.ndarray) -> np.ndarray:
-        """
-        :param windows: N x window_size x na x nc
-        :return:        N x na x nc
-        """
-        new_shape = (windows.shape[0], *windows.shape[2:])
-        return np.zeros(new_shape, dtype=windows.dtype)
-
-    def load(self, path):
-        pass
-
-    def save(self, path):
-        pass
-
 
