@@ -296,7 +296,7 @@ class LSTMComplexPredictor:
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
         """
-        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
+        self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=0)
 
     def predict(self, X_test):
         """
